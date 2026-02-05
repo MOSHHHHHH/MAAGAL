@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>תרגול מעגל הקווינטות</title>
+    <style>
+        :root {
+            --primary: #3b82f6;
+            --secondary: #64748b;
+            --success: #22c55e;
+            --error: #ef4444;
+            --bg: #f8fafc;
+            --card: #ffffff;
+            --text: #1e293b;
+            --circle-bg: #e2e8f0;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg: #0f172a;
+                --card: #1e293b;
+                --text: #f1f5f9;
+                --circle-bg: #334155;
+            }
+        }
+
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow-x: hidden;
+            transition: background-color 0.3s;
+        }
+
+        .container {
+            width: 90%;
+            max-width: 800px;
+            background: var(--card);
+            padding: 2rem;
+            border-radius: 1.5rem;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            text-align: center;
+            position: relative;
+        }
+
+        h1 { margin-bottom: 1.5rem; }
+
+        .screen { display: none; animation: fadeIn 0.5s ease; }
+        .screen.active { display: block; }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .btn-group { display: flex; justify-content: center; gap: 1rem; margin: 1.5rem 0; flex-wrap: wrap; }
+        
+        button {
+            padding: 0.8rem 1.5rem;
+            border: none;
+            border-radius: 2rem;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.2s;
+            font-size: 1rem;
+        }
+
+        .btn-toggle { background: var(--circle-bg); color: var(--text); }
+        .btn-toggle.selected { background: var(--primary); color: white; }
+
+        .btn-main {
+            background: var(--primary);
+            color: white;
+            padding: 1rem 3rem;
+            margin-top: 2rem;
+            opacity: 0.5;
+            pointer-events: none;
+        }
+        .btn-main.ready { opacity: 1; pointer-events: auto; }
+        .btn-main:hover { transform: scale(1.05); box-shadow: 0 0 15px rgba(59,130,246,0.4); }
+
+        /* Practice UI */
+        .key-signature { height: 120px; margin-bottom: 1rem; }
+        .key-signature img { height: 100%; border-radius: 8px; }
+
+        .degrees-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(45px, 1fr));
+            gap: 0.5rem;
+            margin: 2rem 0;
+            direction: ltr; /* Piano scales are read L to R */
+        }
+
+        .degree-circle {
+            width: 45px;
+            height: 45px;
+            background: var(--circle-bg);
+            border-radius: 50%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            position: relative;
+            transition: all 0.2s;
+        }
+
+        .fingering-label {
+            font-size: 0.7rem;
+            position: absolute;
+            top: -20px;
+            color: var(--secondary);
+        }
+
+        .degree-circle.active { 
+            border: 3px solid var(--primary);
+            animation: pulse 1s infinite alternate;
+        }
+
+        .degree-circle.correct { background: var(--success); color: white; border-color: transparent; transform: scale(1.1); }
+        .degree-circle.error { background: var(--error); color: white; animation: shake 0.3s; }
+
+        @keyframes pulse { from { transform: scale(1); } to { transform: scale(1.05); } }
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+
+        .status-bar { display: flex; justify-content: space-between; margin-top: 1rem; color: var(--secondary); font-size: 0.9rem; }
+
+        /* MIDI setup */
+        .midi-icon { font-size: 3rem; margin: 1rem; animation: wave 2s infinite; }
+        @keyframes wave { 0%, 100% { opacity: 0.5; } 50% { opacity: 1; } }
+
+        .confetti {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background: var(--primary);
+            top: -10px;
+            animation: fall 1.5s linear forwards;
+        }
+        @keyframes fall { to { transform: translateY(500px) rotate(360deg); opacity: 0; } }
+
+    </style>
+</head>
+<body>
+
+<div class="container" id="app">
+    <!-- Welcome Screen -->
+    <div id="screen-welcome" class="screen active">
+        <h1>תרגול מעגל הקווינטות</h1>
+        <p>בחר הגדרות כדי להתחיל:</p>
+        
+        <div class="btn-group">
+            <button class="btn-toggle" onclick="setMode('major')" id="mode-major">מז'ור</button>
+            <button class="btn-toggle" onclick="setMode('minor')" id="mode-minor">מינור</button>
+        </div>
+
+        <div class="btn-group">
+            <button class="btn-toggle" onclick="setHand('RH')" id="hand-rh">יד ימין</button>
+            <button class="btn-toggle" onclick="setHand('LH')" id="hand-lh">יד שמאל</button>
+        </div>
+
+        <button class="btn-main" id="start-btn" onclick="requestMIDI()">התחל תרגול</button>
+    </div>
+
+    <!-- MIDI Screen -->
+    <div id="screen-midi" class="screen">
+        <h1>חיבור MIDI</h1>
+        <div class="midi-icon">🎹</div>
+        <p id="midi-status">מבקש גישה ל-MIDI...</p>
+        <p style="font-size: 0.8rem; color: var(--secondary);">מומלץ להשתמש ב-Chrome או Edge.</p>
+    </div>
+
+    <!-- Practice Screen -->
+    <div id="screen-practice" class="screen">
+        <div class="status-bar">
+            <span id="scale-name-display"></span>
+            <span id="errors-count">טעויות בסולם: 0</span>
+        </div>
+        
+        <div class="key-signature" id="key-sig-container">
+            <!-- Image loaded via JS -->
+        </div>
+
+        <div class="degrees-grid" id="degrees-container">
+            <!-- Degrees loaded via JS -->
+        </div>
+
+        <div id="feedback-msg" style="height: 24px; font-weight: bold;"></div>
+    </div>
+
+    <!-- End Screen -->
+    <div id="screen-end" class="screen">
+        <h1>כל הכבוד!</h1>
+        <p>סיימת את כל המעגל.</p>
+        <div style="font-size: 2rem; margin: 1.5rem 0;" id="final-stats"></div>
+        <button class="btn-toggle" onclick="location.reload()">תרגול חדש</button>
+    </div>
+</div>
+
+<script>
+    // --- Data Structures ---
+    const MAJOR_SCALES = [
+        { name: 'C', root: 0, img: 'Key_Signature_C_major.jpg', fingerings: { RH: [1,2,3,1,2,3,4,1,2,3,1,2,3,4,5], LH: [5,4,3,2,1,3,2,1,4,3,2,1,3,2,1] } },
+        { name: 'G', root: 7, img: 'Key_Signature_G_major.jpg', fingerings: { RH: [1,2,3,1,2,3,4,1,2,3,1,2,3,4,5], LH: [5,4,3,2,1,3,2,1,4,3,2,1,3,2,1] } },
+        { name: 'D', root: 2, img: 'Key_Signature_D_major.jpg', fingerings: { RH: [1,2,3,1,2,3,4,1,2,3,1,2,3,4,5], LH: [5,4,3,2,1,3,2,1,4,3,2,1,3,2,1] } },
+        { name: 'A', root: 9, img: 'Key_Signature_A_major.jpg', fingerings: { RH: [1,2,3,1,2,3,4,1,2,3,1,2,3,4,5], LH: [5,4,3,2,1,3,2,1,4,3,2,1,3,2,1] } },
+        { name: 'E', root: 4, img: 'Key_Signature_E_major.jpg', fingerings: { RH: [1,2,3,1,2,3,4,1,2,3,1,2,3,4,5], LH: [5,4,3,2,1,3,2,1,4,3,2,1,3,2,1] } },
+        { name: 'B', root: 11, img: 'Key_Signature_B_major.jpg', fingerings: { RH: [1,2,3,1,2,3,4,1,2,3,1,2,3,4,5], LH: [4,3,2,1,4,3,2,1,3,2,1,4,3,2,1] } },
+        { name: 'F#', root: 6, img: 'Key_Signature_F-sharp_major.jpg', fingerings: { RH: [2,3,4,1,2,3,1,2,3,4,1,2,3,1,2], LH: [4,3,2,1,3,2,1,4,3,2,1,3,2,1,4] } },
+        { name: 'C#', root: 1, img: 'Key_Signature_C-sharp_major.jpg', fingerings: { RH: [2,3,1,2,3,4,1,2,3,1,2,3,4,1,2], LH: [3,2,1,4,3,2,1,3,2,1,4,3,2,1,3] } },
+        { name: 'Ab', root: 8, img: 'Key_Signature_A-flat_major.jpg', fingerings: { RH: [3,4,1,2,3,1,2,3,4,1,2,3,1,2,3], LH: [3,2,1,4,3,2,1,3,2,1,4,3,2,1,3] } },
+        { name: 'Eb', root: 3, img: 'Key_Signature_E-flat_major.jpg', fingerings: { RH: [3,1,2,3,4,1,2,3,1,2,3,4,1,2,3], LH: [3,2,1,4,3,2,1,3,2,1,4,3,2,1,3] } },
+        { name: 'Bb', root: 10, img: 'Key_Signature_B-flat_major.jpg', fingerings: { RH: [4,1,2,3,1,2,3,4,1,2,3,1,2,3,4], LH: [3,2,1,4,3,2,1,3,2,1,4,3,2,1,3] } },
+        { name: 'F', root: 5, img: 'Key_Signature_F_major.jpg', fingerings: { RH: [1,2,3,4,1,2,3,1,2,3,4,1,2,3,4], LH: [5,4,3,2,1,3,2,1,4,3,2,1,3,2,1] } }
+    ];
+
+    const MINOR_SCALES = [
+        { name: 'A', root: 9, rel: 'C', img: 'Key_Signature_C_major.jpg', fingerings: { RH: [1,2,3,1,2,3,4,1,2,3,1,2,3,4,5], LH: [5,4,3,2,1,3,2,1,4,3,2,1,3,2,1] } },
+        { name: 'E', root: 4, rel: 'G', img: 'Key_Signature_G_major.jpg', fingerings: { RH: [1,2,3,1,2,3,4,1,2,3,1,2,3,4,5], LH: [5,4,3,2,1,3,2,1,4,3,2,1,3,2,1] } },
+        { name: 'B', root: 11, rel: 'D', img: 'Key_Signature_D_major.jpg', fingerings: { RH: [1,2,3,1,2,3,4,1,2,3,1,2,3,4,5], LH: [4,3,2,1,4,3,2,1,3,2,1,4,3,2,1] } },
+        { name: 'F#', root: 6, rel: 'A', img: 'Key_Signature_A_major.jpg', fingerings: { RH: [2,3,4,1,2,3,1,2,3,4,1,2,3,1,2], LH: [4,3,2,1,3,2,1,4,3,2,1,3,2,1,4] } },
+        { name: 'C#', root: 1, rel: 'E', img: 'Key_Signature_E_major.jpg', fingerings: { RH: [1,2,3,1,2,3,4,1,2,3,1,2,3,4,5], LH: [5,4,3,2,1,3,2,1,4,3,2,1,3,2,1] } },
+        { name: 'G#', root: 8, rel: 'B', img: 'Key_Signature_B_major.jpg', fingerings: { RH: [2,3,1,2,3,4,1,2,3,1,2,3,4,1,2], LH: [3,2,1,4,3,2,1,3,2,1,4,3,2,1,3] } },
+        { name: 'D#', root: 3, rel: 'F#', img: 'Key_Signature_F-sharp_major.jpg', fingerings: { RH: [2,3,4,1,2,3,1,2,3,4,1,2,3,1,2], LH: [4,3,2,1,3,2,1,4,3,2,1,3,2,1,4] } },
+        { name: 'A#', root: 10, rel: 'C#', img: 'Key_Signature_C-sharp_major.jpg', fingerings: { RH: [2,3,1,2,3,4,1,2,3,1,2,3,4,1,2], LH: [3,2,1,4,3,2,1,3,2,1,4,3,2,1,3] } },
+        { name: 'F', root: 5, rel: 'Ab', img: 'Key_Signature_A-flat_major.jpg', fingerings: { RH: [1,2,3,4,1,2,3,1,2,3,4,1,2,3,4], LH: [5,4,3,2,1,3,2,1,4,3,2,1,3,2,1] } },
+        { name: 'C', root: 0, rel: 'Eb', img: 'Key_Signature_E-flat_major.jpg', fingerings: { RH: [1,2,3,1,2,3,4,1,2,3,1,2,3,4,5], LH: [5,4,3,2,1,3,2,1,4,3,2,1,3,2,1] } },
+        { name: 'G', root: 7, rel: 'Bb', img: 'Key_Signature_B-flat_major.jpg', fingerings: { RH: [1,2,3,1,2,3,4,1,2,3,1,2,3,4,5], LH: [5,4,3,2,1,3,2,1,4,3,2,1,3,2,1] } },
+        { name: 'D', root: 2, rel: 'F', img: 'Key_Signature_F_major.jpg', fingerings: { RH: [1,2,3,1,2,3,4,1,2,3,1,2,3,4,5], LH: [5,4,3,2,1,3,2,1,4,3,2,1,3,2,1] } }
+    ];
+
+    const MAJOR_STEPS = [0, 2, 4, 5, 7, 9, 11];
+    const MINOR_NATURAL_STEPS = [0, 2, 3, 5, 7, 8, 10];
+
+    // --- State ---
+    let state = {
+        mode: null,
+        hand: null,
+        currentScaleIdx: 0,
+        currentNoteIdx: 0,
+        scaleErrors: 0,
+        totalErrors: 0,
+        scalesDone: 0,
+        activeBaseOctave: null,
+        isTransitioning: false
+    };
+
+    // --- UI Logic ---
+    function setMode(m) {
+        state.mode = m;
+        document.getElementById('mode-major').classList.toggle('selected', m === 'major');
+        document.getElementById('mode-minor').classList.toggle('selected', m === 'minor');
+        checkReady();
+    }
+
+    function setHand(h) {
+        state.hand = h;
+        document.getElementById('hand-rh').classList.toggle('selected', h === 'RH');
+        document.getElementById('hand-lh').classList.toggle('selected', h === 'LH');
+        checkReady();
+    }
+
+    function checkReady() {
+        if (state.mode && state.hand) {
+            document.getElementById('start-btn').classList.add('ready');
+        }
+    }
+
+    function showScreen(id) {
+        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+        document.getElementById(`screen-${id}`).classList.add('active');
+    }
+
+    // --- MIDI Engine ---
+    async function requestMIDI() {
+        showScreen('midi');
+        try {
+            const access = await navigator.requestMIDIAccess();
+            document.getElementById('midi-status').innerText = "MIDI מחובר! לחץ על קליד כלשהו בפסנתר...";
+            for (let input of access.inputs.values()) {
+                input.onmidimessage = onMIDIMessage;
+            }
+        } catch (e) {
+            document.getElementById('midi-status').innerHTML = `<span style="color:var(--error)">שגיאה בחיבור MIDI. בדוק שהפסנתר מחובר ושהדפדפן תומך.</span>`;
+        }
+    }
+
+    function onMIDIMessage(msg) {
+        const [status, note, velocity] = msg.data;
+        if (status === 144 && velocity > 0) { // Note On
+            if (document.getElementById('screen-midi').classList.contains('active')) {
+                startPractice();
+            } else if (document.getElementById('screen-practice').classList.contains('active')) {
+                handleNote(note);
+            }
+        }
+    }
+
+    // --- Core Logic ---
+    function startPractice() {
+        state.currentScaleIdx = 0;
+        state.totalErrors = 0;
+        showScreen('practice');
+        loadScale();
+    }
+
+    function loadScale() {
+        const scales = state.mode === 'major' ? MAJOR_SCALES : MINOR_SCALES;
+        const scale = scales[state.currentScaleIdx];
+        state.currentNoteIdx = 0;
+        state.scaleErrors = 0;
+        state.activeBaseOctave = null;
+        state.isTransitioning = false;
+
+        document.getElementById('scale-name-display').innerText = `סולם ${state.currentScaleIdx + 1}/12`;
+        document.getElementById('errors-count').innerText = `טעויות בסולם: 0`;
+        
+        // Load Image
+        const container = document.getElementById('key-sig-container');
+        container.innerHTML = `<img src="pic/${scale.img}" alt="Key Signature" onerror="this.src='https://placehold.co/200x120?text=Key+Sig'">`;
+
+        // Generate Target Sequence
+        const steps = state.mode === 'major' ? MAJOR_STEPS : MINOR_NATURAL_STEPS;
+        const seq = [];
+        
+        // 2 Octaves Up
+        for (let i = 0; i < 15; i++) {
+            const deg = (i % 7);
+            const oct = Math.floor(i / 7);
+            seq.push({ degree: deg + 1, midiOffset: steps[deg] + (oct * 12) });
+        }
+        // Down
+        for (let i = 13; i >= 0; i--) {
+            const deg = (i % 7);
+            const oct = Math.floor(i / 7);
+            seq.push({ degree: deg + 1, midiOffset: steps[deg] + (oct * 12) });
+        }
+        state.targetSequence = seq;
+
+        // Render UI
+        const grid = document.getElementById('degrees-container');
+        grid.innerHTML = '';
+        const fingering = scale.fingerings[state.hand];
+        
+        // Fingering for return path
+        const fullFingering = [...fingering, ...[...fingering].reverse().slice(1)];
+
+        seq.forEach((item, i) => {
+            const div = document.createElement('div');
+            div.className = 'degree-circle';
+            div.id = `deg-${i}`;
+            div.innerHTML = `<span>${item.degree}</span>`;
+            
+            const finger = document.createElement('span');
+            finger.className = 'fingering-label';
+            finger.innerText = fullFingering[i] || '';
+            div.appendChild(finger);
+            
+            grid.appendChild(div);
+        });
+
+        updateActiveDegree();
+    }
+
+    function updateActiveDegree() {
+        document.querySelectorAll('.degree-circle').forEach(c => c.classList.remove('active'));
+        const active = document.getElementById(`deg-${state.currentNoteIdx}`);
+        if (active) active.classList.add('active');
+    }
+
+    function handleNote(playedMidi) {
+        if (state.isTransitioning) return;
+
+        const scales = state.mode === 'major' ? MAJOR_SCALES : MINOR_SCALES;
+        const scale = scales[state.currentScaleIdx];
+        const target = state.targetSequence[state.currentNoteIdx];
+
+        // On first note, establish octave
+        if (state.currentNoteIdx === 0) {
+            if (playedMidi % 12 === scale.root % 12) {
+                state.activeBaseOctave = Math.floor(playedMidi / 12);
+            } else {
+                triggerError();
+                return;
+            }
+        }
+
+        const expectedMidi = (state.activeBaseOctave * 12) + target.midiOffset;
+
+        if (playedMidi === expectedMidi) {
+            // Success
+            const el = document.getElementById(`deg-${state.currentNoteIdx}`);
+            el.classList.add('correct');
+            state.currentNoteIdx++;
+
+            if (state.currentNoteIdx >= state.targetSequence.length) {
+                completeScale();
+            } else {
+                updateActiveDegree();
+            }
+        } else {
+            triggerError();
+        }
+    }
+
+    function triggerError() {
+        state.scaleErrors++;
+        state.totalErrors++;
+        document.getElementById('errors-count').innerText = `טעויות בסולם: ${state.scaleErrors}`;
+        
+        const grid = document.getElementById('degrees-container');
+        grid.classList.add('shake');
+        setTimeout(() => grid.classList.remove('shake'), 300);
+
+        if (state.scaleErrors >= 3) {
+            document.getElementById('feedback-msg').innerText = "סולם קשה מדי - עוברים הלאה";
+            document.getElementById('feedback-msg').style.color = "var(--error)";
+            state.isTransitioning = true;
+            setTimeout(nextScale, 1500);
+        } else {
+            // Reset scale progress
+            state.currentNoteIdx = 0;
+            document.querySelectorAll('.degree-circle').forEach(c => {
+                c.classList.remove('correct');
+                c.classList.add('error');
+                setTimeout(() => c.classList.remove('error'), 300);
+            });
+            updateActiveDegree();
+        }
+    }
+
+    function completeScale() {
+        state.isTransitioning = true;
+        document.getElementById('feedback-msg').innerText = "מצוין!";
+        document.getElementById('feedback-msg').style.color = "var(--success)";
+        createConfetti();
+        setTimeout(nextScale, 1500);
+    }
+
+    function nextScale() {
+        document.getElementById('feedback-msg').innerText = "";
+        state.currentScaleIdx++;
+        if (state.currentScaleIdx < 12) {
+            loadScale();
+        } else {
+            finish();
+        }
+    }
+
+    function finish() {
+        showScreen('end');
+        document.getElementById('final-stats').innerText = `סה"כ טעויות: ${state.totalErrors}`;
+    }
+
+    function createConfetti() {
+        for(let i=0; i<30; i++) {
+            const c = document.createElement('div');
+            c.className = 'confetti';
+            c.style.left = Math.random() * 100 + '%';
+            c.style.background = `hsl(${Math.random()*360}, 70%, 50%)`;
+            c.style.animationDelay = Math.random() * 0.5 + 's';
+            document.body.appendChild(c);
+            setTimeout(() => c.remove(), 2000);
+        }
+    }
+
+</script>
+</body>
+</html>
