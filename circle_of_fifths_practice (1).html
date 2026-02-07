@@ -1,0 +1,1023 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>תרגול מעגל הקווינטות</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f5f5;
+            color: #333;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            transition: background 0.3s, color 0.3s;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            body {
+                background: #1a1a1a;
+                color: #e0e0e0;
+            }
+            .card {
+                background: #2a2a2a;
+                color: #e0e0e0;
+            }
+            .btn {
+                background: #3a3a3a;
+                color: #e0e0e0;
+            }
+            .btn.active, .btn:hover:not(:disabled) {
+                background: #4a4a4a;
+            }
+            .degree-circle {
+                background: #3a3a3a;
+                color: #e0e0e0;
+            }
+            .error-msg {
+                background: #4a1a1a;
+            }
+        }
+
+        .card {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+            max-width: 900px;
+            width: 100%;
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            color: #2c3e50;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            h1 {
+                color: #5dade2;
+            }
+        }
+
+        .screen {
+            display: none;
+        }
+
+        .screen.active {
+            display: block;
+            animation: slideIn 0.4s ease-out;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 15px 30px;
+            border: none;
+            border-radius: 25px;
+            font-size: 1.1em;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: #ecf0f1;
+            color: #2c3e50;
+            min-width: 120px;
+        }
+
+        .btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn.active {
+            background: #3498db;
+            color: white;
+        }
+
+        .btn.minor.active {
+            background: #7f8c8d;
+        }
+
+        .btn-primary {
+            background: #3498db;
+            color: white;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background: #2980b9;
+        }
+
+        .btn-success {
+            background: #27ae60;
+            color: white;
+        }
+
+        .info-text {
+            text-align: center;
+            margin: 20px 0;
+            font-size: 1.1em;
+            line-height: 1.6;
+        }
+
+        .warning-text {
+            color: #e67e22;
+            font-size: 0.95em;
+            margin-top: 10px;
+        }
+
+        .error-msg {
+            background: #e74c3c;
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+            animation: shake 0.5s;
+        }
+
+        .success-msg {
+            background: #27ae60;
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+            animation: bounce 0.5s;
+        }
+
+        .piano-icon {
+            text-align: center;
+            font-size: 3em;
+            margin: 20px 0;
+            animation: wave 2s infinite;
+        }
+
+        .practice-container {
+            margin-top: 30px;
+        }
+
+        .key-signature {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .key-signature img {
+            max-width: 300px;
+            height: auto;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .degrees-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin: 30px 0;
+            padding: 20px;
+        }
+
+        .degree-circle {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: #ecf0f1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.3em;
+            font-weight: bold;
+            transition: all 0.3s;
+            position: relative;
+        }
+
+        .degree-circle.current {
+            animation: pulse 1s infinite;
+            background: #5dade2;
+            color: white;
+        }
+
+        .degree-circle.correct {
+            background: #27ae60;
+            color: white;
+            animation: zoomIn 0.3s;
+        }
+
+        .degree-circle.error {
+            background: #e74c3c;
+            color: white;
+            animation: shake 0.5s;
+        }
+
+        .stats {
+            display: flex;
+            justify-content: space-around;
+            margin: 20px 0;
+            padding: 20px;
+            background: #ecf0f1;
+            border-radius: 10px;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            .stats {
+                background: #3a3a3a;
+            }
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 2em;
+            font-weight: bold;
+            color: #3498db;
+        }
+
+        .stat-label {
+            font-size: 0.9em;
+            color: #7f8c8d;
+            margin-top: 5px;
+        }
+
+        .completion-message {
+            text-align: center;
+            font-size: 2em;
+            margin: 30px 0;
+            animation: textReveal 1s;
+        }
+
+        .trophy-icon {
+            font-size: 5em;
+            text-align: center;
+            margin: 20px 0;
+            animation: bounce 1s;
+        }
+
+        .copyright-notice {
+            text-align: center;
+            margin-top: 40px;
+            padding: 20px;
+            font-size: 0.85em;
+            color: #7f8c8d;
+            line-height: 1.6;
+            border-top: 1px solid #ecf0f1;
+        }
+
+        .copyright-notice a {
+            color: #3498db;
+            text-decoration: none;
+        }
+
+        .copyright-notice a:hover {
+            text-decoration: underline;
+        }
+
+        .finger-number {
+            font-size: 0.9em;
+            color: #7f8c8d;
+            font-weight: bold;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            .copyright-notice {
+                color: #95a5a6;
+                border-top-color: #3a3a3a;
+            }
+            .copyright-notice a {
+                color: #5dade2;
+            }
+            .finger-number {
+                color: #95a5a6;
+            }
+        }
+
+        .results-table {
+            margin: 30px 0;
+            border-collapse: collapse;
+            width: 100%;
+        }
+
+        .results-table td {
+            padding: 15px;
+            border: 1px solid #ecf0f1;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            .results-table td {
+                border-color: #3a3a3a;
+            }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(50px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.15); }
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            75% { transform: translateX(10px); }
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-20px); }
+        }
+
+        @keyframes zoomIn {
+            from { transform: scale(0.5); }
+            to { transform: scale(1); }
+        }
+
+        @keyframes wave {
+            0%, 100% { transform: rotate(0deg); }
+            25% { transform: rotate(-10deg); }
+            75% { transform: rotate(10deg); }
+        }
+
+        @keyframes textReveal {
+            from { opacity: 0; transform: scale(0.8); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        .confetti {
+            position: fixed;
+            width: 10px;
+            height: 10px;
+            background: #3498db;
+            position: absolute;
+            animation: confettiFall 3s linear;
+        }
+
+        @keyframes confettiFall {
+            to {
+                transform: translateY(100vh) rotate(360deg);
+                opacity: 0;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .card {
+                padding: 20px;
+            }
+            h1 {
+                font-size: 1.8em;
+            }
+            .degree-circle {
+                width: 40px;
+                height: 40px;
+                font-size: 1em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>תרגול מעגל הקווינטות</h1>
+
+        <!-- מסך פתיחה -->
+        <div id="setupScreen" class="screen active">
+            <div class="info-text">בחר את סוג הסולם והיד שבה תתרגל:</div>
+            
+            <div class="button-group">
+                <button class="btn" id="majorBtn">מז'ור (Major)</button>
+                <button class="btn minor" id="minorBtn">מינור (Minor)</button>
+            </div>
+
+            <div class="button-group">
+                <button class="btn" id="rightHandBtn">יד ימין</button>
+                <button class="btn" id="leftHandBtn">יד שמאל</button>
+            </div>
+
+            <div class="button-group">
+                <button class="btn btn-primary" id="startBtn" disabled>התחל תרגול</button>
+            </div>
+            
+            <div class="copyright-notice">
+                The images in this app were created by Special-T and are used under the CC BY-SA 4.0 license.<br>
+                <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noopener">https://creativecommons.org/licenses/by-sa/4.0/</a>
+            </div>
+        </div>
+
+        <!-- מסך חיבור MIDI -->
+        <div id="midiScreen" class="screen">
+            <div class="info-text">
+                האפליקציה זקוקה לגישה ל-MIDI כדי לזהות את הנגינה שלך.
+                <br>לחץ על אישור בחלון שייפתח.
+            </div>
+            <div class="warning-text">
+                תאימות טובה: Chrome, Edge, Opera. תאימות חלקית: Firefox. לא נתמך: Safari (נכון ל-2025).
+            </div>
+            <div class="button-group">
+                <button class="btn btn-primary" id="connectMidiBtn">התחבר ל-MIDI</button>
+            </div>
+            <div id="midiStatus"></div>
+        </div>
+
+        <!-- מסך תרגול -->
+        <div id="practiceScreen" class="screen">
+            <div class="practice-container">
+                <div class="key-signature">
+                    <img id="keySignatureImg" src="" alt="Key Signature">
+                </div>
+
+                <div class="degrees-container" id="degreesContainer"></div>
+
+                <div class="stats">
+                    <div class="stat-item">
+                        <div class="stat-number" id="currentScaleNum">1</div>
+                        <div class="stat-label">סולם נוכחי</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number" id="scaleErrorsNum">0</div>
+                        <div class="stat-label">טעויות בסולם זה</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number" id="totalErrorsNum">0</div>
+                        <div class="stat-label">סה"כ טעויות</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- מסך סיום -->
+        <div id="completionScreen" class="screen">
+            <div class="completion-message">🎉 סיימת את המעגל! 🎉</div>
+            
+            <div id="trophyContainer"></div>
+
+            <div class="stats">
+                <div class="stat-item">
+                    <div class="stat-number" id="finalErrorsNum">0</div>
+                    <div class="stat-label">סה"כ טעויות</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number" id="failedScalesNum">0</div>
+                    <div class="stat-label">סולמות שדילגת עליהם</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number" id="perfectScalesNum">0</div>
+                    <div class="stat-label">סולמות ללא טעויות</div>
+                </div>
+            </div>
+
+            <div class="button-group">
+                <button class="btn btn-primary" id="restartBtn">התחל מחדש</button>
+                <button class="btn" id="changeSettingsBtn">שנה הגדרות</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // נתוני סולמות
+        const scaleData = {
+            major: {
+                order: ['C', 'G', 'D', 'A', 'E', 'B', 'Gb', 'Db', 'Ab', 'Eb', 'Bb', 'F'],
+                scales: {
+                    'C': { image: 'pic/Key_Signature_C_major.jpg', fingering: { RH: [1,2,3,1,2,3,4,5], LH: [5,4,3,2,1,3,2,1] }, notes: ['C','D','E','F','G','A','B','C'] },
+                    'G': { image: 'pic/Key_Signature_G_major.jpg', fingering: { RH: [1,2,3,1,2,3,4,5], LH: [5,4,3,2,1,3,2,1] }, notes: ['G','A','B','C','D','E','F#','G'] },
+                    'D': { image: 'pic/Key_Signature_D_major.jpg', fingering: { RH: [1,2,3,1,2,3,4,5], LH: [5,4,3,2,1,3,2,1] }, notes: ['D','E','F#','G','A','B','C#','D'] },
+                    'A': { image: 'pic/Key_Signature_A_major.jpg', fingering: { RH: [1,2,3,1,2,3,4,5], LH: [5,4,3,2,1,3,2,1] }, notes: ['A','B','C#','D','E','F#','G#','A'] },
+                    'E': { image: 'pic/Key_Signature_E_major.jpg', fingering: { RH: [1,2,3,1,2,3,4,5], LH: [5,4,3,2,1,3,2,1] }, notes: ['E','F#','G#','A','B','C#','D#','E'] },
+                    'B': { image: 'pic/Key_Signature_B_major.jpg', fingering: { RH: [1,2,3,1,2,3,4,5], LH: [4,3,2,1,4,3,2,1] }, notes: ['B','C#','D#','E','F#','G#','A#','B'] },
+                    'Gb': { image: 'pic/Key_Signature_G-flat_major.jpg', fingering: { RH: [2,3,4,1,2,3,4,5], LH: [4,3,2,1,4,3,2,1] }, notes: ['Gb','Ab','Bb','Cb','Db','Eb','F','Gb'] },
+                    'Db': { image: 'pic/Key_Signature_D-flat_major.jpg', fingering: { RH: [2,3,4,1,2,3,4,5], LH: [3,2,1,4,3,2,1,3] }, notes: ['Db','Eb','F','Gb','Ab','Bb','C','Db'] },
+                    'Ab': { image: 'pic/Key_Signature_A-flat_major.jpg', fingering: { RH: [3,4,1,2,3,1,2,3], LH: [3,2,1,4,3,2,1,3] }, notes: ['Ab','Bb','C','Db','Eb','F','G','Ab'] },
+                    'Eb': { image: 'pic/Key_Signature_E-flat_major.jpg', fingering: { RH: [3,4,1,2,3,1,2,3], LH: [3,2,1,4,3,2,1,3] }, notes: ['Eb','F','G','Ab','Bb','C','D','Eb'] },
+                    'Bb': { image: 'pic/Key_Signature_B-flat_major.jpg', fingering: { RH: [2,3,4,1,2,3,4,5], LH: [3,2,1,4,3,2,1,3] }, notes: ['Bb','C','D','Eb','F','G','A','Bb'] },
+                    'F': { image: 'pic/Key_Signature_F_major.jpg', fingering: { RH: [1,2,3,4,1,2,3,4], LH: [5,4,3,2,1,3,2,1] }, notes: ['F','G','A','Bb','C','D','E','F'] }
+                }
+            },
+            minor: {
+                order: ['A', 'E', 'B', 'F#', 'C#', 'G#', 'D#', 'Bb', 'F', 'C', 'G', 'D'],
+                scales: {
+                    'A': { 
+                        image: 'pic/Key_Signature_C_major.jpg', 
+                        fingering: { RH: [1,2,3,1,2,3,4,5], LH: [5,4,3,2,1,3,2,1] }, 
+                        notes: ['A','B','C','D','E','F','G','A'] 
+                    },
+                    'E': { 
+                        image: 'pic/Key_Signature_G_major.jpg', 
+                        fingering: { RH: [1,2,3,1,2,3,4,5], LH: [5,4,3,2,1,3,2,1] }, 
+                        notes: ['E','F#','G','A','B','C','D','E'] 
+                    },
+                    'B': { 
+                        image: 'pic/Key_Signature_D_major.jpg', 
+                        fingering: { RH: [2,3,4,1,2,3,4,5], LH: [4,3,2,1,3,2,1,2] }, 
+                        notes: ['B','C#','D','E','F#','G','A','B'] 
+                    },
+                    'F#': { 
+                        image: 'pic/Key_Signature_A_major.jpg', 
+                        fingering: { RH: [2,3,4,1,2,3,1,2], LH: [5,4,3,2,1,3,2,1] }, 
+                        notes: ['F#','G#','A','B','C#','D','E','F#'] 
+                    },
+                    'C#': { 
+                        image: 'pic/Key_Signature_E_major.jpg', 
+                        fingering: { RH: [2,3,1,2,3,4,1,2], LH: [5,4,3,2,1,3,2,1] }, 
+                        notes: ['C#','D#','E','F#','G#','A','B','C#'] 
+                    },
+                    'G#': { 
+                        image: 'pic/Key_Signature_B_major.jpg', 
+                        fingering: { RH: [2,3,1,2,3,1,2,3], LH: [3,2,1,4,3,2,1,3] }, 
+                        notes: ['G#','A#','B','C#','D#','E','F#','G#'] 
+                    },
+                    'D#': { 
+                        image: 'pic/Key_Signature_G-flat_major.jpg', 
+                        fingering: { RH: [2,3,1,2,3,1,2,3], LH: [3,2,1,4,3,2,1,3] }, 
+                        notes: ['D#','E#','F#','G#','A#','B','C#','D#'] 
+                    },
+                    'Bb': { 
+                        image: 'pic/Key_Signature_D-flat_major.jpg', 
+                        fingering: { RH: [2,1,2,3,4,1,2,3], LH: [3,2,1,4,3,2,1,3] }, 
+                        notes: ['Bb','C','Db','Eb','F','Gb','Ab','Bb'] 
+                    },
+                    'F': { 
+                        image: 'pic/Key_Signature_A-flat_major.jpg', 
+                        fingering: { RH: [1,2,3,4,1,2,3,4], LH: [5,4,3,2,1,3,2,1] }, 
+                        notes: ['F','G','Ab','Bb','C','Db','Eb','F'] 
+                    },
+                    'C': { 
+                        image: 'pic/Key_Signature_E-flat_major.jpg', 
+                        fingering: { RH: [1,2,3,1,2,3,4,5], LH: [5,4,3,2,1,3,2,1] }, 
+                        notes: ['C','D','Eb','F','G','Ab','Bb','C'] 
+                    },
+                    'G': { 
+                        image: 'pic/Key_Signature_B-flat_major.jpg', 
+                        fingering: { RH: [1,2,3,1,2,3,4,5], LH: [5,4,3,2,1,3,2,1] }, 
+                        notes: ['G','A','Bb','C','D','Eb','F','G'] 
+                    },
+                    'D': { 
+                        image: 'pic/Key_Signature_F_major.jpg', 
+                        fingering: { RH: [1,2,3,1,2,3,4,5], LH: [5,4,3,2,1,3,2,1] }, 
+                        notes: ['D','E','F','G','A','Bb','C','D'] 
+                    }
+                }
+            }
+        };
+
+        // משתני מצב
+        let state = {
+            scaleType: null,
+            hand: null,
+            currentScaleIndex: 0,
+            currentDegreeIndex: 0,
+            scaleErrors: 0,
+            totalErrors: 0,
+            failedScales: 0,
+            perfectScales: 0,
+            midiAccess: null,
+            octaveOffset: null,
+            isAscending: true,
+            fullSequence: []
+        };
+
+        // המרת שם תו ל-MIDI number
+        function noteToMidi(noteName, octave) {
+            const notes = {
+                'C': 0, 'C#': 1, 'Db': 1, 'D': 2, 'D#': 3, 'Eb': 3, 'E': 4, 'E#': 5, 'Fb': 4,
+                'F': 5, 'F#': 6, 'Gb': 6, 'G': 7, 'G#': 8, 'Ab': 8, 'A': 9, 'A#': 10, 'Bb': 10,
+                'B': 11, 'B#': 0, 'Cb': 11
+            };
+            
+            if (!(noteName in notes)) {
+                console.error('Invalid note name:', noteName);
+                return null;
+            }
+            
+            let midiNote = notes[noteName];
+            let octaveAdjustment = octave;
+            
+            // B# הוא למעשה C של האוקטבה הבאה
+            if (noteName === 'B#') {
+                octaveAdjustment++;
+            }
+            // Cb הוא למעשה B של האוקטבה הקודמת
+            if (noteName === 'Cb') {
+                octaveAdjustment--;
+            }
+            
+            // MIDI note 0 = C-1, לכן C4 = 60 = (4+1)*12 + 0
+            return midiNote + (octaveAdjustment + 1) * 12;
+        }
+
+        // יצירת רצף מלא של תווים (עלייה + ירידה)
+        function createFullSequence(scaleNotes) {
+            const ascending = [...scaleNotes];
+            const descending = [...scaleNotes].reverse().slice(1, -1);
+            return [...ascending, ...descending];
+        }
+        
+        // יצירת רצף מלא של תווים עם אינדיקציה לאוקטבה
+        function createFullSequenceWithOctaves(scaleNotes) {
+            // עלייה: תווים 0-7, תו 7 הוא אוקטבה מעל
+            const ascending = scaleNotes.map((note, idx) => ({
+                note: note,
+                octaveOffset: idx === 7 ? 1 : 0
+            }));
+            
+            // ירידה: תווים 6-1 (בלי 7 ו-0)
+            const descending = [...scaleNotes].slice(1, -1).reverse().map(note => ({
+                note: note,
+                octaveOffset: 0
+            }));
+            
+            return [...ascending, ...descending];
+        }
+
+        // אלמנטים
+        const setupScreen = document.getElementById('setupScreen');
+        const midiScreen = document.getElementById('midiScreen');
+        const practiceScreen = document.getElementById('practiceScreen');
+        const completionScreen = document.getElementById('completionScreen');
+
+        const majorBtn = document.getElementById('majorBtn');
+        const minorBtn = document.getElementById('minorBtn');
+        const rightHandBtn = document.getElementById('rightHandBtn');
+        const leftHandBtn = document.getElementById('leftHandBtn');
+        const startBtn = document.getElementById('startBtn');
+        const connectMidiBtn = document.getElementById('connectMidiBtn');
+        const restartBtn = document.getElementById('restartBtn');
+        const changeSettingsBtn = document.getElementById('changeSettingsBtn');
+
+        // בחירת סוג סולם
+        majorBtn.addEventListener('click', () => {
+            state.scaleType = 'major';
+            majorBtn.classList.add('active');
+            minorBtn.classList.remove('active');
+            checkStartButton();
+        });
+
+        minorBtn.addEventListener('click', () => {
+            state.scaleType = 'minor';
+            minorBtn.classList.add('active');
+            majorBtn.classList.remove('active');
+            checkStartButton();
+        });
+
+        // בחירת יד
+        rightHandBtn.addEventListener('click', () => {
+            state.hand = 'RH';
+            rightHandBtn.classList.add('active');
+            leftHandBtn.classList.remove('active');
+            checkStartButton();
+        });
+
+        leftHandBtn.addEventListener('click', () => {
+            state.hand = 'LH';
+            leftHandBtn.classList.add('active');
+            rightHandBtn.classList.remove('active');
+            checkStartButton();
+        });
+
+        // בדיקה אם ניתן להתחיל
+        function checkStartButton() {
+            startBtn.disabled = !(state.scaleType && state.hand);
+        }
+
+        // מעבר למסך MIDI
+        startBtn.addEventListener('click', () => {
+            setupScreen.classList.remove('active');
+            midiScreen.classList.add('active');
+        });
+
+        // חיבור MIDI
+        connectMidiBtn.addEventListener('click', async () => {
+            try {
+                const midiStatus = document.getElementById('midiStatus');
+                midiStatus.innerHTML = '<div class="info-text">מבקש גישה ל-MIDI...</div>';
+                
+                state.midiAccess = await navigator.requestMIDIAccess();
+                
+                midiStatus.innerHTML = `
+                    <div class="info-text">
+                        <div class="piano-icon">🎹</div>
+                        נא ללחוץ על כל תו כלשהו בפסנתר כדי לבדוק את החיבור...
+                    </div>
+                `;
+
+                setupMidiListeners();
+
+            } catch (error) {
+                const midiStatus = document.getElementById('midiStatus');
+                midiStatus.innerHTML = `
+                    <div class="error-msg">
+                        ❌ שגיאה בחיבור ל-MIDI: ${error.message}
+                        <br>ודא שהדפדפן תומך ב-Web MIDI API
+                    </div>
+                    <div class="button-group">
+                        <button class="btn btn-primary" onclick="location.reload()">נסה שוב</button>
+                    </div>
+                `;
+            }
+        });
+
+        // הגדרת מאזיני MIDI
+        function setupMidiListeners() {
+            let firstNoteReceived = false;
+
+            for (let input of state.midiAccess.inputs.values()) {
+                input.onmidimessage = (message) => {
+                    const [status, note, velocity] = message.data;
+                    
+                    // Note On
+                    if (status >= 144 && status <= 159 && velocity > 0) {
+                        if (!firstNoteReceived) {
+                            firstNoteReceived = true;
+                            document.getElementById('midiStatus').innerHTML = `
+                                <div class="success-msg">✅ החיבור הצליח! מתחיל תרגול...</div>
+                            `;
+                            setTimeout(() => {
+                                midiScreen.classList.remove('active');
+                                practiceScreen.classList.add('active');
+                                startPractice();
+                            }, 1500);
+                        } else {
+                            handleNoteInput(note);
+                        }
+                    }
+                };
+            }
+        }
+
+        // התחלת תרגול
+        function startPractice() {
+            state.currentScaleIndex = 0;
+            state.totalErrors = 0;
+            state.failedScales = 0;
+            state.perfectScales = 0;
+            loadScale();
+        }
+
+        // טעינת סולם
+        function loadScale() {
+            state.currentDegreeIndex = 0;
+            state.scaleErrors = 0;
+            state.octaveOffset = null;
+            state.isAscending = true;
+
+            const scaleOrder = scaleData[state.scaleType].order;
+            const scaleName = scaleOrder[state.currentScaleIndex];
+            const scale = scaleData[state.scaleType].scales[scaleName];
+
+            // עדכון תמונה
+            document.getElementById('keySignatureImg').src = scale.image;
+
+            // יצירת רצף מלא עם מידע על אוקטבות
+            state.fullSequence = createFullSequenceWithOctaves(scale.notes);
+
+            // הצגת אצבועות
+            const fingering = scale.fingering[state.hand];
+            // עלייה: האצבועות כפי שהן
+            // ירידה: הפוך ללא הראשון והאחרון
+            const descendingFingering = [...fingering].reverse().slice(1, -1);
+            const fullFingering = [...fingering, ...descendingFingering];
+
+            // יצירת עיגולי דרגות עם אצבוע מעל כל דרגה
+            const degreesContainer = document.getElementById('degreesContainer');
+            degreesContainer.innerHTML = '';
+            
+            for (let i = 0; i < state.fullSequence.length; i++) {
+                const wrapper = document.createElement('div');
+                wrapper.style.display = 'flex';
+                wrapper.style.flexDirection = 'column';
+                wrapper.style.alignItems = 'center';
+                wrapper.style.gap = '5px';
+                
+                // מספר אצבע מעל
+                const fingerNum = document.createElement('div');
+                fingerNum.className = 'finger-number';
+                fingerNum.textContent = fullFingering[i];
+                
+                // עיגול דרגה
+                const circle = document.createElement('div');
+                circle.className = 'degree-circle';
+                circle.textContent = i < 8 ? (i + 1) : (15 - i);
+                circle.id = `degree-${i}`;
+                
+                wrapper.appendChild(fingerNum);
+                wrapper.appendChild(circle);
+                degreesContainer.appendChild(wrapper);
+            }
+
+            document.getElementById('degree-0').classList.add('current');
+
+            // עדכון סטטיסטיקות
+            document.getElementById('currentScaleNum').textContent = state.currentScaleIndex + 1;
+            document.getElementById('scaleErrorsNum').textContent = 0;
+            document.getElementById('totalErrorsNum').textContent = state.totalErrors;
+        }
+
+        // טיפול בקלט תו
+        function handleNoteInput(midiNote) {
+            if (state.currentScaleIndex >= scaleData[state.scaleType].order.length) return;
+
+            const currentSequenceItem = state.fullSequence[state.currentDegreeIndex];
+            const expectedNoteName = currentSequenceItem.note;
+            const additionalOctaveOffset = currentSequenceItem.octaveOffset;
+            
+            // קביעת אוקטבה בתו הראשון
+            if (state.octaveOffset === null) {
+                const baseNote = noteToMidi(expectedNoteName, 0);
+                state.octaveOffset = Math.floor((midiNote - baseNote) / 12);
+            }
+
+            const expectedMidi = noteToMidi(expectedNoteName, state.octaveOffset + additionalOctaveOffset);
+            
+            // בדיקה אם התו נכון
+            if (midiNote === expectedMidi) {
+                handleCorrectNote();
+            } else {
+                handleError();
+            }
+        }
+
+        // טיפול בתו נכון
+        function handleCorrectNote() {
+            const currentCircle = document.getElementById(`degree-${state.currentDegreeIndex}`);
+            currentCircle.classList.remove('current');
+            currentCircle.classList.add('correct');
+
+            state.currentDegreeIndex++;
+
+            if (state.currentDegreeIndex >= state.fullSequence.length) {
+                handleScaleComplete();
+            } else {
+                const nextCircle = document.getElementById(`degree-${state.currentDegreeIndex}`);
+                nextCircle.classList.add('current');
+            }
+        }
+
+        // טיפול בטעות
+        function handleError() {
+            state.scaleErrors++;
+            state.totalErrors++;
+
+            // אנימציית shake
+            const degreesContainer = document.getElementById('degreesContainer');
+            degreesContainer.style.animation = 'none';
+            setTimeout(() => {
+                degreesContainer.style.animation = 'shake 0.5s';
+            }, 10);
+
+            // צביעת הדרגה הנוכחית באדום
+            const currentCircle = document.getElementById(`degree-${state.currentDegreeIndex}`);
+            currentCircle.classList.add('error');
+            setTimeout(() => {
+                currentCircle.classList.remove('error');
+            }, 500);
+
+            // עדכון מונה טעויות
+            document.getElementById('scaleErrorsNum').textContent = state.scaleErrors;
+            document.getElementById('totalErrorsNum').textContent = state.totalErrors;
+
+            // בדיקה אם הגענו ל-3 טעויות
+            if (state.scaleErrors >= 3) {
+                handleScaleFailed();
+            } else {
+                // איפוס הסולם
+                resetScale();
+            }
+        }
+
+        // איפוס סולם לאחר טעות
+        function resetScale() {
+            state.currentDegreeIndex = 0;
+            state.octaveOffset = null;
+
+            // איפוס צבעים
+            for (let i = 0; i < state.fullSequence.length; i++) {
+                const circle = document.getElementById(`degree-${i}`);
+                circle.classList.remove('current', 'correct', 'error');
+            }
+
+            document.getElementById('degree-0').classList.add('current');
+        }
+
+        // סולם נכשל (3 טעויות)
+        function handleScaleFailed() {
+            state.failedScales++;
+            
+            const degreesContainer = document.getElementById('degreesContainer');
+            degreesContainer.innerHTML = `
+                <div class="error-msg" style="animation: slideUp 0.5s">
+                    עברת לסולם הבא (קשה מדי כרגע)
+                </div>
+            `;
+
+            setTimeout(() => {
+                moveToNextScale();
+            }, 2000);
+        }
+
+        // סולם הושלם בהצלחה
+        function handleScaleComplete() {
+            if (state.scaleErrors === 0) {
+                state.perfectScales++;
+            }
+
+            createConfetti();
+
+            const degreesContainer = document.getElementById('degreesContainer');
+            degreesContainer.innerHTML = `
+                <div class="success-msg" style="animation: bounce 0.5s">
+                    🎵 מצוין! 🎵
+                </div>
+            `;
+
+            setTimeout(() => {
+                moveToNextScale();
+            }, 1500);
+        }
+
+        // יצירת אפקט confetti
+        function createConfetti() {
+            const colors = ['#3498db', '#e74c3c', '#f39c12', '#27ae60', '#9b59b6'];
+            for (let i = 0; i < 30; i++) {
+                setTimeout(() => {
+                    const confetti = document.createElement('div');
+                    confetti.style.position = 'fixed';
+                    confetti.style.left = Math.random() * 100 + '%';
+                    confetti.style.top = '-10px';
+                    confetti.style.width = '10px';
+                    confetti.style.height = '10px';
+                    confetti.style.background = colors[Math.floor(Math.random() * colors.length)];
+                    confetti.style.animation = 'confettiFall 3s linear';
+                    document.body.appendChild(confetti);
+                    setTimeout(() => confetti.remove(), 3000);
+                }, i * 50);
+            }
+        }
+
+        // מעבר לסולם הבא
+        function moveToNextScale() {
+            state.currentScaleIndex++;
+
+            if (state.currentScaleIndex >= scaleData[state.scaleType].order.length) {
+                showCompletion();
+            } else {
+                loadScale();
+            }
+        }
+
+        // הצגת מסך סיום
+        function showCompletion() {
+            practiceScreen.classList.remove('active');
+            completionScreen.classList.add('active');
+
+            const totalScales = scaleData[state.scaleType].order.length;
+            
+            document.getElementById('finalErrorsNum').textContent = state.totalErrors;
+            document.getElementById('failedScalesNum').textContent = state.failedScales;
+            document.getElementById('perfectScalesNum').textContent = state.perfectScales;
+
+            const trophyContainer = document.getElementById('trophyContainer');
+            if (state.totalErrors === 0) {
+                trophyContainer.innerHTML = '<div class="trophy-icon">🏆</div>';
+            }
+        }
+
+        // התחל מחדש
+        restartBtn.addEventListener('click', () => {
+            completionScreen.classList.remove('active');
+            practiceScreen.classList.add('active');
+            startPractice();
+        });
+
+        // שנה הגדרות
+        changeSettingsBtn.addEventListener('click', () => {
+            location.reload();
+        });
+    </script>
+</body>
+</html>
